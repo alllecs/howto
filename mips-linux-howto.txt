@@ -1,0 +1,78 @@
+		MIPS Linux HOWTO
+        Alexander Smirnov <alllecs@cs.niisi.ras.ru>
+
+Об этом руководстве
+
+Это руководство описывает сборку ядра linux
+для MIPS
+
+1. Сборка кросс-компилятора
+---------------------------
+
+1.1 Скачиваем кросс компилятор в папку /tmp
+
+	cd /tmp
+	wget http://sourcery.mentor.com/public/gnu_toolchain/mips-linux-gnu/mips-2015.11-32-mips-linux-gnu-i686-pc-linux-gnu.tar.bz2
+
+Имеем архив с кросс-компилятором, который необходимо разверуть.
+
+1.2 Разворачиваем кросс-компилятор (рекомендуется в папку /opt)
+
+Получаем права администратора:
+
+	su
+
+Переходим в папку /opt
+
+	cd /opt
+
+Разархивируем кросс-компилятор
+
+	tar vfx /tmp/mips-2015.11-32-mips-linux-gnu-i686-pc-linux-gnu.tar.bz2
+
+После распаковки выходим из администратора.
+
+2. Сборка ядра Linux
+--------------------
+
+2.1 Получаем исходные тексты ядра с kernel.org:
+
+	wget https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.4.tar.gz
+
+2.2 Распаковываем архив:
+
+	tar vfx linux-4.4.tar.gz
+
+2.3 Переходим в каталог lunux-4.4:
+
+	cd linux-4.4
+
+2.4 Назначаем архитектуру и кросс-компилятор системе:
+
+	export ARCH=mips
+	export CROSS_COMPILE=/opt/mips-2015.11/bin/mips-linux-gnu-
+
+2.5 Выбор конфигурационного файла ядра:
+
+	make malta_defconfig
+
+2.6 Запуск сборки образа ядра vmlinux:
+
+	make vmlinux
+
+Получен желаемый образ ядра vmlinux.
+
+3. Настройка
+------------
+
+Для настройки параметров Linux, необходимо перейти в файл
+.config в папке linux-4.4.
+
+После установления нужных параметров, необходимо выполнить:
+
+	make oldconfig
+
+и заново пересобрать ядро
+
+	make -j 5
+

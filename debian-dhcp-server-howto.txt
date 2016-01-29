@@ -1,0 +1,50 @@
+	Debian DHCP-server HOWTO
+	Alexander Smirnov <alllecs@yandex.ru>
+
+Об этом руководстве
+
+Это руководство описывает настройку
+dhcp сервера.
+
+1. Установка пакетов
+Для установки пакета DHCP-сервера
+необходимо выполнить:
+
+	apt-get install isc-dhcp-server
+
+2. Выбор интерфейса
+В файле /etc/default/isc-dhcp-server
+необходимо найти строку INTERFACES=""
+и добавить необходимый вам интерфейс.
+Например для eth0:
+
+	INTERFACES="eth0"
+
+3. Настройка сервера
+Для настройки перейдите в файл
+/etc/dhcp/dhcpd.conf
+или создайте его при необходимости
+с содержанием:
+
+authoritative;
+default-lease-time 600;
+max-lease-time 7200;
+#log-facility local7;
+
+subnet 10.223.254.0 netmask 255.255.255.0
+{
+        option subnet-mask 255.255.255.0;
+        option routers 10.223.254.1;
+        option broadcast-address 10.223.254.255;
+        option domain-name-servers 10.223.254.3, 8.8.8.8;
+        option domain-name "linux-asus-i386";
+        range 10.223.254.2 10.223.254.199;
+}
+
+4. Перезапустите dhcp-сервер
+Для перезапуска сервера необходимо выполнить:
+
+	service isc-dhcp-server restart
+
+Если все сделано, как указано выше, то вы не увидите ошибки
+и dhcp-сервер будет успешно присваивать ip устройствам.

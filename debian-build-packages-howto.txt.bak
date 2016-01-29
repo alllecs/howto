@@ -1,0 +1,82 @@
+	Debian Build Packages HOWTO
+	Alexander Smirnov <alllecs@yandex.ru>
+		10/09/2015
+
+
+Об этом руководстве
+
+Это руководство описывает сборку и установку
+src-пакета для debian в своем окружении.
+Все скрипты, файлы и т.п.,
+относящиеся к сборке пакета в системе Debian,
+традиционно располагаются в подкаталоге debian/
+вместе с исходными текстами.
+
+Ссылка на руководство с официального сайта:
+https://wiki.debian.org/BuildingTutorial
+Ссылка на руководство на русском языке:
+https://wiki.debian.org/ru/DebianBuildPackages
+
+1. Проверка source.list
+Для корректной работы следует добавить в
+/etc/apt/source.list строки:
+
+	deb-src http://ftp.debian.org/debian testing main contrib non-free
+	deb-src http://ftp.debian.org/debian sid main contrib non-free
+	deb-src http://ftp.debian.org/debian experimental main contrib non-free
+
+Зеркало пакетов, разумеется, можете выбрать любое - то,
+которым наиболее часто пользуетесь.
+
+2. Обновление пакетов
+После изменения файла source.list рекомендуется
+обновить список доступных пакеты.
+Это можно выполнить командой:
+
+	sudo apt-get update
+
+3. Установка иструмента для сборки
+Для сборки пакетов необходимо установить
+devscrips. Для этого выполните:
+
+	sudo apt-get install devscripts
+
+4. Получения и распаковка пакета с исходными текстами
+Для получения и распаковки выполните:
+
+	apt-get source package
+
+где package - имя вашего пакета.
+Например:
+
+	apt-get source qbittorrent
+
+5. Установка зависимостей
+Если apt-get настроен правильно, то установка
+зависимостей для сборки, выполняется одной командой:
+
+	sudo apt-get build-dep package
+
+где package - имя вашего пакета.
+Например:
+
+	sudo apt-get build-dep qbittorrent
+
+6. Сборка пакета
+Для сборки пакета необходимо перейти в папку установленного пакета
+Например:
+
+	cd qbittorrent
+
+И запустить сборку deb пакета без подписи
+с помощью команды:
+
+	debuild -b -uc -us
+
+7. Установка пакета
+После сборки, двоичного пакета, который будет в родительском каталоге,
+осталось его установить командой:
+
+	dpkg -i package.deb
+
+где package.deb - имя пакета.

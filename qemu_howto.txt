@@ -1,0 +1,44 @@
+0. Типичная сборка и установка ПО под Linux из исходных текстов
+0.1 Скачать
+wget http://ftp.debian.org/debian/pool/main/l/links2/links2_2.12.orig.tar.bz2
+0.2 Распаковать
+tar vxjf links2_2.12.orig.tar.bz2
+0.3 Перейти
+cd links-2.12/
+0.4 Сконфигурировать
+./configure
+0.5 Собрать
+make -j 3
+0.6 Установить
+sudo make install
+
+1. Cборка
+
+1) 
+	./configure.duna
+2) 
+	make -j 5
+
+Ошибки при запуске:
+
+1)
+WARNING: Image format was not specified for '../small_mips_debian/jessiesmall.img' and probing guessed raw.
+         Automatically detecting the format is dangerous for raw images, write operations on block 0 will be restricted.
+         Specify the 'raw' format explicitly to remove the restrictions.
+qemu-system-mips: romfile "efi-pcnet.rom" is empty
+
+Решение:
+Поиск файла
+	find . -name efi-pcnet.rom
+Копирование в опрашиваемую директорию
+	cp ./pc-bios/efi-pcnet.rom /usr/local/share/qemu/	
+
+2)
+Specify the 'raw' format explicitly to remove the restrictions.
+qemu-system-mips: Initialization of device cirrus-vga failed: failed to find romfile "vgabios-cirrus.bin"
+
+Решение
+Поиск файла vgabios-cirrus.bin
+	find . -name vgabios-cirrus.bin
+Копирование в опрашиваемую директорию
+	cp ./pc-bios/*rom /usr/local/share/qemu/

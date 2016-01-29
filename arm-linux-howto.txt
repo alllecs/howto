@@ -1,0 +1,235 @@
+                ARM Linux HOWTO
+        Alexander Smirnov <alllecs@cs.niisi.ras.ru>
+
+Об этом руководстве
+
+Это руководство описывает сборку ядра linux
+для ARM
+
+
+Как собрать ядро Linux для ARM и ... не вспотеть
+================================================
+
+   Будем собирать ядро Linux для машины с процессором архитектуры ARM
+   (далее целевая ЭВМ).
+   Для сборки будем использовать машину с процессором архитектуры
+   x86 (ну или x86_64 AKA amd64, что не суть важно) (далее
+   инструментальная ЭВМ).
+
+Итак у нас есть инструментальная ЭВМ под управлением ОС Debian Linux.
+
+Все практические действия мы будем предпринимать в командной строке,
+так что, пожалуйста, озаботьтесь доступом к командной строке
+инструментальной ЭВМ (проще говоря, запускайте эмулятор терминала).
+
+
+О кросс-компиляторе
+-------------------
+
+Для того, чтобы породить машинный код ARM, из которого ядро Linux
+состоит на много процентов, нам понадобится компилятор языка C,
+да не простой, а с особенностью: компилятор должен работать
+на процессоре x86 (инструментальной ЭВМ), а порождаемый
+им машинный код должен быть для процессора ARM (целевой ЭВМ).
+
+Случай, когда архитектура процессора инструментальной ЭВМ,
+на которой работает компилятор, отличается от архитектуры
+процессора целевой ЭВМ, называется кросс-разработкой,
+а компилятор кросс-компилятором.
+
+Из сказанного ясно, без подходящего кросс-компилятора никуда.
+
+Для добычи кросс-компиляторов человечество придумало много инструментов,
+но самые популярные вот:
+
+  * crosstool-ng (http://crosstool-ng.org/);
+  * buildroot (http://buildroot.org/);
+  * Cross Linux From Scratch (http://trac.cross-lfs.org/).
+
+Но есть ещё способ (для самых ленивых) --- скачать готовый кросс-компилятор.
+
+Пойдём по этому ленивому пути --- качаем компилятор CodeSourcery
+(Осторожно! Почти 100 МБ!).
+
+  >
+  > Тут надо отметить, что для кросс-разработки под ARM надо не только
+  > компилятор языка C, но и ассемблер (ARM), дизассемблер (ARM), редактор
+  > связей (он же компоновщик, он же linker) --- опять таки ARM, да и другие
+  > полезные инструменты. Для обозначения указанного комплекта программных
+  > средств используется термин toolchain, однако ниже для простоты
+  > будет использоваться слово <<кросс-компилятор>> или <<компилятор>>.
+  > 
+
+  $ cd /tmp
+  $ wget http://sourcery.mentor.com/public/gnu_toolchain/arm-none-linux-gnueabi/arm-2014.05-29-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2
+
+Итак, архив с кросс-компилятором в нашем временном каталоге, теперь
+надо бы его развернуть. В принципе разворачивать его можно куда
+угодно, но Filesystem Hierarchy Standard (FHS) для таких целей рекомендует /opt.
+Этот каталог, как правило, рядовым пользователям не доступен, так 
+что сделаемся root'ом и распакуем архив:
+
+  $ su
+  ...
+  # cd /opt
+  # tar vfx /tmp/arm-2014.05-29-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2 
+
+После распаковки полномочия root'а нам больше не нужны, можно вновь сделаться
+простым пользователем и перейти непосредственно к сборке ядра. Сборку будем
+производить в каталоге ~/arm-linux. Сделаем такой каталог и перейдём туда:
+
+  $ mkdir ~/arm-linux
+  $ cd ~/arm-linux/
+
+Проверим наш кросс-компилятор. Скомпилируем программу hello-world:
+
+  $ echo '#include <stdio.h>' > hello.c
+  $ echo 'int main() { printf("Hello, world!\n"); }' >> hello.c
+  $ /opt/arm-2014.05/bin/arm-none-linux-gnueabi-gcc hello.c 
+
+Если всё прошло нормально, то получим файл a.out.
+
+  >
+  > Что может пойти не так?
+  >
+  > К примеру, при запуске на x86_64 без поддержки i386 получим такое сообщение:
+  >
+  > -bash: /opt/arm-2014.05/bin/arm-none-linux-gnueabi-gcc: No such file or directory
+  >
+  > Тут надо поддержку i386 включить и установить соответствующую libc.
+  > В debian это делается так:
+  > 
+  > # dpkg --add-architecture i386
+  > # apt-get update
+  > # apt-get install libc6:i386
+  >
+
+Запустить a.out для ARM на x86 не выйдет:
+
+  $ ./a.out 
+-bash: ./a.out: cannot execute binary file
+
+Вот что говорит про a.out стандартная утилита file:
+
+  $ file ./a.out 
+  ./a.out: ELF 32-bit LSB executable, ARM, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.16, not stripped
+
+А вот что она говорит про обычный исполняемый файл:
+
+  $ file /bin/ls
+  /bin/ls: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.26, BuildID[sha1]=0x55f1e005df252708d4c456dcc2c7dccea1006553, stripped
+
+Ну действрительно, x86-64 это вам не ARM!
+
+Удостоверившись, что кросс-компилятор работает перейдём к ядру Linux.
+
+
+Сборка ядра Linux
+-----------------
+
+Сперва озаботимся получением исходных текстов ядра --- скачаем их с kernel.org:
+
+  $ wget https://www.kernel.org/pub/linux/kernel/v3.x/linux-3.16.3.tar.xz
+
+Распаковываем архив и переходим в каталог linux-3.16.3:
+
+  $ tar vfx linux-3.16.3.tar.xz
+  ...
+  $ cd linux-3.16.3
+
+  >
+  > Кроме toolchain для сборки ядра Linux надо кое-что ещё.
+  > Например, утилита make.
+  > Если окажется, что описываемые ниже инструкции не срабатывают,
+  > то возможно надо что-то доставить
+  >
+
+Подготовимся к сборке под ARM:
+
+  $ export ARCH=arm
+  $ export CROSS_COMPILE=/opt/arm-2014.05/bin/arm-none-linux-gnueabi-
+
+Переменная ARCH объясняет системе сборки ядра (Kbuild), что все
+платформено-зависимые компоненты брать в arch/arm, а переменная
+CROSS_COMPILE явно указывает Kbuild, каким компилятором (а точнее toolchain)
+пользоваться --- их на машине может быть несколько, а Kbuild любит точность.
+
+  > В принципе этого можно не делать, а каждый раз устанавливать переменные
+  > ARCH и CROSS_COMPILE в командной строке make, но тогда строка make
+  > будет выглядеть несколько громоздко.
+
+Теперь выберем конфигурацию для ядра на основе заготовленной конфигурации для
+платы Versatile.
+
+  $ make versatile_defconfig
+
+  ...
+
+  #
+  # configuration written to .config
+  #
+
+Итак, наш файл с конфигурацией ядра .config готов!
+
+Запускаем сборку образа ядра zImage:
+
+  $ make zImage
+
+  >
+  > Примечание:
+  >   обладатели многопроцессорных ЭВМ (или многоядерных процессоров)
+  >   могут получить ощутимую пользу, если запустят make -j <число процессоров>
+  >
+  >   Например, сборка на старом, но зато 24-процессорном сервере занимает
+  >   менее половины минуты:
+  >
+  >   $ time make -j 24 zImage
+  >
+  >   ...
+  >
+  >   real      0m24.100s
+  >   user      5m25.376s
+  >   sys       0m15.696s
+  >
+
+
+Проверка под qemu
+-----------------
+
+Чтобы убедиться, что собранный образ zImage это всё-таки именно ядро Linux
+для ARM, а не случайный мусор, воспользуемся эмулятором qemu:
+
+  $ qemu-system-arm -M versatilepb -kernel ./arch/arm/boot/zImage -append console=ttyAMA0 -serial stdio
+
+  ...
+
+  Uncompressing Linux... done, booting the kernel.
+  Booting Linux on physical CPU 0x0
+  Linux version 3.16.3 (antony@prizma) (gcc version 4.8.3 20140320 (prerelease) (Sourcery CodeBench Lite 2014.05-29) ) #1 Thu Sep 25 23:50:47 MSK 2014
+  CPU: ARM926EJ-S [41069265] revision 5 (ARMv5TEJ), cr=00093177
+  CPU: VIVT data cache, VIVT instruction cache
+  Machine: ARM-Versatile PB
+  Memory policy: Data cache writeback
+  sched_clock: 32 bits at 24MHz, resolution 41ns, wraps every 178956969942ns
+  Built 1 zonelists in Zone order, mobility grouping on.  Total pages: 32512
+  Kernel command line: console=ttyAMA0
+
+  ...
+
+  Please append a correct "root=" boot option; here are the available partitions:
+  1f00           65536 mtdblock0  (driver?)
+  Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(0,0)
+  CPU: 0 PID: 1 Comm: swapper Not tainted 3.16.3 #1
+  [<c00196d4>] (unwind_backtrace) from [<c0016ee0>] (show_stack+0x10/0x14)
+  [<c0016ee0>] (show_stack) from [<c02b2e94>] (panic+0x84/0x1e0)
+  [<c02b2e94>] (panic) from [<c038d068>] (mount_block_root+0x1ac/0x258)
+  [<c038d068>] (mount_block_root) from [<c038d2f4>] (mount_root+0xe4/0x10c)
+  [<c038d2f4>] (mount_root) from [<c038d47c>] (prepare_namespace+0x160/0x1b4)
+  [<c038d47c>] (prepare_namespace) from [<c038cce4>] (kernel_init_freeable+0x170/0x1b4)
+  [<c038cce4>] (kernel_init_freeable) from [<c02b25b0>] (kernel_init+0x8/0xec)
+  [<c02b25b0>] (kernel_init) from [<c0013c10>] (ret_from_fork+0x14/0x24)
+  ---[ end Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(0,0)
+
+Понятное дело, что мы не подготовили никакой корневой файловой системы,
+так что при попытке смонтировать корневую файловую систему ядро
+потерпело неудачу и запаниковало.
