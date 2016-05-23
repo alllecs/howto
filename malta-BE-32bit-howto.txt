@@ -1,0 +1,35 @@
+		Сборка ядра Linux для Malta Big Endian 32 bit
+	Alexander Smirnov <alllecs@cs.niisi.ras.ru>
+
+1. Получаем исходные тексты ядра с kernel.org:
+
+        wget https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.4.tar.gz
+
+2. Распаковываем архив с исходными текстами ядра:
+
+        tar vfx linux-4.4.tar.gz
+
+3. Переходим в каталог lunux-4.4:
+
+        cd linux-4.4
+
+4. Назначаем архитектуру и кросс-компилятор системе сборки ядра:
+
+        export ARCH=mips
+        export CROSS_COMPILE=/opt/mips-2015.11/bin/mips-linux-gnu-
+
+5. Cоздаем конфигурационный файл malta-big_defconfig
+
+	$ sed "s/CONFIG_CPU_LITTLE_ENDIAN=y/CONFIG_CPU_BIG_ENDIAN=y/" \
+	        < arch/mips/configs/malta_defconfig \
+	        > arch/mips/configs/malta-big_defconfig
+	$ echo "CONFIG_FHANDLE=y" >> arch/mips/configs/malta-big_defconfig
+	$ echo "CONFIG_CGROUPS=y" >> arch/mips/configs/malta-big_defconfig
+
+6. Выбораем конфигурационный файла ядра:
+
+	make malta-big_defconfig
+
+7. Запускаем сборку образа ядра
+
+	make

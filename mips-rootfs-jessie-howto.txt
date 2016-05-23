@@ -1,0 +1,599 @@
+﻿		Debian rootfs for MIPS
+	Alexander Smirnov <alllecs@cs.niisi.ras.ru>
+		Версия 28.01.2016
+
+Об этом руководстве
+
+Это руководство описывает этапы получения
+архива rootfs.tar.bz2 содержащего
+Debian Jessie для mips32,
+а также получение из архива rootfs.tar.bz2
+*.img файла и проверка работы Debian Jessie на qemu-system-mips.
+Приводится пример запуска тестов, в том числе тестов графики.
+Инструкция проверена на инструментальной ЭВМ 
+под управлением ОС Debian Linux (далее ПК).
+Для ряда операций потребуются права администратора.
+
+Содержание:
+1. Обновление (на ПК)
+2. Установка пакетов (на ПК)
+3. Получение скрпита (на ПК)
+4. Запуск сборки rootfs (на ПК)
+	4.1 Сборка с помощью скрипта
+	4.2 Сборка debootstrap
+5. Установка/удаление пакетов в собираемой системе (ОС)
+6. Получение rootfs.tar.bz2 
+7. Запуск на qemu
+8. Ошибка Read-only file system
+9. Сборка deb пакетов (qt)
+10. Графическая оболочка
+11. Программы и тесты графики
+
+Приложение 1. Сборка ядра Linux (получение vmlinux)
+
+
+1. Запуск обновления пакетов на инструментальной ЭВМ пользователя
+(при первом использовании)
+
+Для запуска обновления выполните:
+
+	sudo apt-get update
+
+2. Установка рекомендуемых пакетов на ЭВМ пользователя:
+debootstrap, binfmt-support, qemu, qemu-user-static
+
+Для этого выполните:
+
+	sudo apt-get install binfmt-support qemu qemu-user-static debootstrap
+
+Если не установлен git, для установки выполните:
+
+	sudo apt-get install git
+
+3. Получение скрипта запуска сборки rootfs на ЭВМ пользователя 
+(при первом использовании)
+
+Склонируйте скрипт запуска с github.com.
+Для этого выполните:
+
+	git clone https://github.com/ZubairLK/mkdebianrfs.git
+
+Перейдите в папку mkdebianrfs:
+
+	cd mkdebianrfs
+
+4 Сборка rootfs
+4.1 Запуск скрипта сборки rootfs под MIPS на ЭВМ пользователя
+(для jessie mips):
+
+	sudo ./mkdebianrfs.sh --tar mips jessie rootfs.tar.bz2
+
+При возникновении ошибок проверьте export proxy
+или (при ошибке /usr/sbin/debootstrap: 1314) выполнить:
+	mount -o remount,exec,dev /tmp
+
+В процессе установки необходимо:
+	-ввести пароль суперпользователя (например pcuser)
+	-выбрать en_US.UTF-8 UTF-8
+	-выбрать Europe, затем Moscow в окне Configuring tzdata
+
+После успешной установки, вы попадете в командную строку эмулятора
+собираемой ОС под root пользователем (root@pc:/#)
+В случае неправильного ввода пароля или при пропуске выбора системной локали
+сборка ОС будет прервана и произойдет выход в командную строку вашего ПК.
+
+
+4.2 Создание корневой файловой системы для MIPS
+
+Создание корневой файловой системы Debian поэтому начнём с установки debootstrap и необходимых для его работы компонентов:
+
+    # aptitude install -y binfmt-support qemu qemu-user-static debootstrap
+
+
+Теперь запустим первую стадию debootstrap:
+
+    # debootstrap --foreign --arch=mips jessie debian-jessie-mips/ \
+            http://ftp.ru.debian.org/debian/
+
+
+На первой стадии debootstrap скачает необходимые для минимальной корневой файловой системы пакеты Debian версии jessie (stable) с сайта ftp.ru.debian.org/debian (официальное российское «зеркало» Debian) для 32-разрядной архитектуры MIPS big-endian (опции --foreign и --arch=mips), и распакует их в каталог debian-jessie-mips/.
+По итогам работы первой стадии debootstrap в каталоге debian-jessie-mips/ будет сформирована файловая система, очень похожая на настоящую, её даже можно попробовать использовать для загрузки. Однако компоненты корневой файловой системы (пакеты Debian) на этой стадии ещё не настроены.
+Для проведения настройки необходимо запустить вторую стадию debootstrap. На этой стадии понадобится запускать программы для MIPS, так что придётся использовать специальный вариант QEMU, так называемый usermode qemu, который обеспечивает запуск отдельных программ для Linux MIPS под Linux amd64.
+Подложим статически собранный эмулятор системы с процессором архитектуры MIPS внутрь корневой файловой системы и запустим debootstrap внутри корневой файловой системы при помощи chroot:
+
+    # cp /usr/bin/qemu-mips-static debian-jessie-mips/usr/bin/
+    # DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true \
+            LC_ALL=C LANGUAGE=C LANG=C \
+            PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin \
+            chroot debian-jessie-mips/ /debootstrap/debootstrap --second-stage
+
+
+По окончании работы второй стадии debootstrap компоненты корневой файловой системы Debian настроены, и осталось нанести последние штрихи (например, поправить кое-какие файлы в /etc, скажем, настроить hostnamе и сеть, добавить пользователей и т.д.).
+Но для данного демонстрационного примеры мы ограничимся установкой тривиального пароля 123 для пользователя root:
+
+    # echo 'root:123' | chroot debian-jessie-mips/ chpasswd
+
+
+Вот теперь корневую файловую систему можно считать настроенной — пора заметать следы. Для сохранности заархивируем корневую файловую систему:
+
+    # rm debian-jessie-mips/usr/bin/qemu-mips-static
+    # tar czf debian-jessie-mips.tar.gz -C debian-jessie-mips .
+
+
+Для запуска под эмулятором корневую файловую систему придётся поместить на виртуальный накопитель (в случае Malta это виртуальный IDE-диск).
+Оценим, какого размера диск нам придётся создать:
+
+    # du -sh debian-jessie-mips/
+    284M    debian-jessie-mips/
+
+
+Раз корневая файловая система занимает менее 300 МБ, то вполне можно выделить для её хранения виртуальный диск на 512 МБ. Создадим файл виртуального диска, создадим на нём файловую систему ext2, на которую и скопируем нашу корневую файловую систему:
+
+    $ dd if=/dev/zero bs=1M count=512 of=debian-jessie-mips.ext2
+    $ /sbin/mke2fs -F debian-jessie-mips.ext2
+
+    # mkdir ext2
+    # mount debian-jessie-mips.ext2 ext2/
+    # tar xf debian-jessie-mips.tar.gz -C ext2/
+    # umount ext2/
+    # rmdir ext2/
+
+
+Теперь запустим Debian Linux под QEMU:
+
+    $ qemu-system-mips -nodefaults -nographic -kernel linux-4.4.3/vmlinux \
+            -serial stdio -hda debian-jessie-mips.ext2 -append "root=/dev/sda"
+
+
+
+
+5. Установка/удаление пакетов в командной строке запущенной эмулируемой ОС
+(Убедитесь что вы в командной строке собираемой ОС:
+
+	ls
+
+На экране должно быть выведено:
+bin   dev  home  media	opt   root  sbin  sys  usr
+boot  etc  lib	 mnt	proc  run   srv   tmp  var).
+
+5.1 Удаление пакетов для получения минимального архива (~150 Мб)
+(пункты 5.1 - 5.2)
+Удаление пакетов можно выполнить командой:
+
+	apt-get --purge remove package*
+
+или:
+
+	dpkg --purge package*
+(удалить пакет вместе с файлами настроек)
+
+Выполните удаление пакетов:
+
+	apt-get --purge remove vim-common vim-tiny
+	apt-get --purge remove manpages
+	apt-get --purge remove tasksel tasksel-data traceroute
+	apt-get --purge remove gcc-4.8-base:mips
+	apt-get --purge remove man-db locales
+	apt-get --purge remove cron
+	apt-get --purge remove debconf-i18n
+	apt-get --purge remove nano
+	apt-get --purge remove wget
+	apt-get --purge remove iptables
+
+Удаление папки doc
+
+	rm -rf /usr/share/doc
+
+5.2 Вывод установленных пакетов
+
+	dpkg --list
+После удаления ненужных пакетов, можно окончить работу, для чего необходимо
+выйти из скрипта (набрав exit). В итоге получаем искомый rootfs (см. пункт 6).
+
+5.3 Получение большого образа (~ 600 Мб)
+(пункты 5.3 - 5.5)
+
+Запуск обновления:
+	apt-get update
+
+5.4 Установка дополнительных пакетов:
+
+	apt-get install pciutils // для работы с PCI
+	apt-get install usbutils // для работы с USB
+	apt-get install xfce4 // рабочий стол
+	apt-get install qt-sdk // для сборки qt пакетов
+	apt-get install build-essential	// компиляция g++ gcc
+	apt-get install libsdl1.2-dev // SDL
+	apt-get install sysbench // тесты производительности
+	apt-get install iceweasel // браузер
+	apt-get install gfortran // фортран
+	apt-get install lightdm // дисплейный менеджер
+	apt-get install wicd // для работы с беспроводной сетью
+	apt-get install pulseaudio // звуковой сервер
+	apt-get install bluez //для работы bluetooth
+
+5.5 Если необходимо, установить Phoronix Test Suite
+Установить Phoronix Test Suite можно командой:
+
+	apt-get install phoronix-test-suite
+
+или скачать .deb пакет командой:
+
+	wget http://phoronix-test-suite.com/releases/repo/pts.debian/files/phoronix-test-suite_6.0.1_all.deb
+
+Установить необходимые дополнительные пакеты командой:
+
+	apt-get install php5-cli php5-gd php5-json
+
+Установить phoronix-test-suite командой:
+
+	dpkg -i phoronix-test-suite_6.0.1_all.deb
+
+6. Выход и получение rootfs.tar.bz2
+
+	exit
+
+Если вы не получили архив rootfs, то возможно у вас не хватает свободного места на диске ПК.
+
+Полученный архив с файловой системой ОС Debian пригоден для загрузки на ПЛИС или эмуляторах через NFS-протокол.
+
+7. Проверка работы полученного файлового образа ОС Debian под mips
+с использованием эмулятора qemu
+
+Для проверки работы ОС на эмуляторе qemu необходимо получить файл с образом ОС.
+
+7.1 Получение файла с образом *.IMG (из собранного ранее rootfs)
+
+На ПК получить права суперпользователя:
+
+	su
+
+Создать пустой IMG-файл:
+
+	dd if=/dev/zero of=jessie.img bs=1M count=4096
+
+Форматировать образ ОС в файле IMG в ext4:
+
+	mkfs.ext4 jessie.img
+
+Создать папку rootfs в каталоге:
+
+	mkdir rootfs
+
+Смонтировать образ в файле jessie.img в папку rootfs:
+
+	mount -o loop jessie.img rootfs
+
+Разархивировать rootfs.tar.bz2:
+
+	tar vxjf rootfs.tar.bz2
+ 
+Размонтировать rootfs:
+
+	umount rootfs
+
+После размонтирования файловая система будет помещена в файл-образ jessie.img (размер более 1Гб!).
+
+При необходимости дать права доступа к файлу-образу обычным пользователям.
+Это нужно для того, чтобы пользователь (не root) мог запустить эмулятор qemu.
+Изменить права доступа:
+
+	chown pcuser:pcuser jessie.img
+
+В итоге, получен файл с образом ОС Debian, пригодный для запуска на эмуляторе qemu.
+
+7.2 Установка qemu
+
+На ПК получить права суперпользователя:
+
+        su
+
+Установить пакеты:
+
+	apt-get install qemu-system qemu-kvm libvirt-bin
+
+После этого, будет доступен эмулятор qemu (man qemu-system).
+
+7.3 Получить образ ядра ОС Linux (vmlinux)
+
+Файл vmlinux прилагается к инструкции
+Смотреть приложение 1!
+##
+
+7.4 Запуск эмулятора qemu-system-mips (qemu-system-mips64)
+
+Для запуска в терминале без рабочего стола (без Х), в папке с vmlinux выполните:
+
+	qemu-system-mips -M malta -m 256 -kernel vmlinux -append "console=ttyS0 root=/dev/sda" -serial stdio -net user -net nic -nographic -monitor none -hda jessie.img 
+
+
+Для запуска в отдельном окне с графикой (с Х), выполните:
+
+	qemu-system-mips -M malta -m 512 -kernel vmlinux -append "console=ttyS0 root=/dev/sda" -usbdevice mouse -usbdevice keyboard -hda jessie.img  -serial stdio -net user -net nic,model=e1000
+
+	qemu-system-mips -M malta -m 2048 -kernel vmlinux -append "console=ttyS0 root=/dev/sda mem=256M@0 mem=1783M@0x90000000" -serial stdio -net user -net nic -nographic -monitor none -hda ../mkdebianrfs/jessiebig.img
+
+
+,где
+	-m 512 - выделяемая память, в Мб
+	vmlinux - ядро ОС Linux
+	root=/dev/sda - адрес диска
+	../jessie.img - полученный ранее *.img файл.
+
+адрес диска можно узнать, выполнив:
+
+	df -h
+
+8. При возникновении ошибки "Read-only file system"
+выполните:
+
+	mount -o remount,rw /
+
+9. Установка src-пакетов на примере qbittorrent
+После запуска Debian Jessie для mips32
+возможно установить scr-пакет для Debian
+в своем окружении.
+
+Ссылка на руководство с официального сайта:
+	https://wiki.debian.org/BuildingTutorial
+Ссылка на руководство на русском языке:
+	https://wiki.debian.org/ru/DebianBuildPackages
+
+9.1. Проверка списка зеркала пакетов sources.list
+Для корректной работы следует добавить в файл
+
+/etc/apt/sources.list строки:
+
+	deb-src http://ftp.debian.org/debian testing main contrib non-free
+	deb-src http://ftp.debian.org/debian sid main contrib non-free
+	deb-src http://ftp.debian.org/debian experimental main contrib non-free
+
+Зеркало пакетов, разумеется, можете выбрать любое - то,
+которым наиболее часто пользуетесь.
+
+9.2. Обновление пакетов
+После изменения файла sources.list необходимо
+обновить список доступных пакеты.
+Это можно выполнить командой:
+
+	sudo apt-get update
+
+9.3. Установка инструментов для сборки
+Для сборки пакетов необходимо установить
+devscripts. Для этого выполните:
+
+	sudo apt-get install devscripts
+
+9.4. Получения и распаковка пакета с исходными текстами
+Для получения и распаковки выполните:
+
+	apt-get source <package name>
+
+где <package name> - имя вашего пакета.
+Например:
+
+	apt-get source qbittorrent
+
+9.5. Установка зависимостей
+Если apt-get настроен правильно, то установка
+зависимостей для сборки, выполняется одной командой:
+
+	sudo apt-get build-dep <package name>
+
+где <package name> - имя вашего пакета.
+Например:
+
+	sudo apt-get build-dep qbittorrent
+
+9.6. Сборка пакета
+Для сборки пакета необходимо перейти в папку установленного пакета
+Например:
+
+	cd qbittorrent
+
+И запустить сборку deb-пакета без подписи
+с помощью команды:
+
+	debuild -b -uc -us
+
+В результате будет получен файл пакета:
+
+	<package name><version><architecture>.deb
+
+Например:
+
+	qbittorrent_3.2.3-2_i386.deb
+
+9.7. Установка пакета
+После сборки, двоичного пакета, который будет в родительском каталоге,
+осталось его установить командой:
+
+	dpkg -i <package name><version><architecture>.deb
+
+Например:
+	dpkg -i qbittorrent_3.2.3-2_i386.deb
+
+10. Для запуска графической оболочки
+
+10.1 Поля ввода логина и пароля
+необходимо установить slim командой:
+
+	apt-get install slim
+
+перезапустить slim командой:
+
+	/etc/init.d/slim restart
+
+остановка slim
+
+	/etc/init.d/slim stop
+
+10.2 Запуск графических программ без запуска slim
+
+Для начала необходимо остановить выполнение slim:
+
+	/etc/init.d/slim stop
+
+Запустить Х оболочку:
+
+	X -ac &
+
+Выполнить запуск графической программы (теста)
+
+	DISPLAY=:0 ./test
+
+11. Программы и тесты графики
+
+11.1 Запуск игры Quake
+Скачать пакет quakespasm
+
+	apt-get install quakespasm
+
+Загрузить pak0.pak c github
+
+	git clone https://github.com/alllecs/que.git
+
+Зайти в папку qua
+
+	cd qua
+
+Запустить quake командой:
+
+	/usr/games/quakespasm -basedir . -height 200 -width 320
+
+,где
+
+	-width 320
+	-height 200
+
+размер окна 320х200
+
+11.2 Запуск теста glxgears (Шестеренки)
+
+Установить пакет:
+
+	apt-get install mesa-utils
+
+Запустить:
+
+	DISPLAY=:0 glxgears
+
+Запуск из терминала с запущенным рабочим столом
+
+11.3 Запуск теста gtkperf
+
+Скачать пакет
+
+	wget http://ftp.ru.debian.org/debian/pool/main/g/gtkperf/gtkperf_0.40+ds-2_mips.deb
+
+Установка пакета:
+
+	dpkg -i gtkperf_0.40+ds-2_mips.deb
+
+Введите команду:
+
+	DISPLAY=:0 gtkperf
+
+Нажмите в открывшемся окне:
+
+	Start
+
+11.4 Запуск теста render_bench
+
+Скачать архив
+
+	wget http://www.phoronix-test-suite.com/benchmark-files/render_bench.tar.gz
+
+Разархивировать:
+
+	tar tar -zxvf render_bench.tar.gz
+
+Установить необходимые для работы библиотеки:
+
+	apt-get install libimlib2-dev
+	apt-get install libxrender-dev
+
+Собрать:
+
+	make CC="gcc -march=7k"
+
+Запустить:
+
+	DISPLAY=:0 render_bench
+
+Приложение 1
+Это приложение описывает сборку ядра linux
+для MIPS
+
+1. Сборка кросс-компилятора
+---------------------------
+
+1.1 Скачиваем кросс компилятор в папку /tmp
+
+	cd /tmp
+	wget http://sourcery.mentor.com/public/gnu_toolchain/mips-linux-gnu/mips-2015.11-32-mips-linux-gnu-i686-pc-linux-gnu.tar.bz2
+
+Имеем архив с кросс-компилятором, который необходимо разверуть.
+
+1.2 Разворачиваем кросс-компилятор (рекомендуется в папку /opt)
+
+Получаем права администратора:
+
+	su
+
+Переходим в папку /opt
+
+	cd /opt
+
+Разархивируем кросс-компилятор
+
+	tar vfx /tmp/mips-2015.11-32-mips-linux-gnu-i686-pc-linux-gnu.tar.bz2
+
+После распаковки выходим из администратора.
+
+2. Сборка ядра Linux
+--------------------
+
+2.1 Получаем исходные тексты ядра с kernel.org:
+
+	wget https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.4.tar.gz
+
+2.2 Распаковываем архив:
+
+	tar vfx linux-4.4.tar.gz
+
+2.3 Переходим в каталог lunux-4.4:
+
+	cd linux-4.4
+
+2.4 Назначаем архитектуру и кросс-компилятор системе:
+
+	export ARCH=mips
+	export CROSS_COMPILE=/opt/mips-2015.11/bin/mips-linux-gnu-
+
+2.5 Выбор конфигурационного файла ядра:
+
+	make malta_defconfig
+
+2.6 Запуск сборки образа ядра vmlinux:
+
+	make vmlinux
+
+Получен желаемый образ ядра vmlinux.
+
+3. Настройка
+------------
+
+Для настройки параметров Linux, необходимо перейти в файл
+.config в папке linux-4.4.
+
+После установления нужных параметров, необходимо выполнить:
+
+	make oldconfig
+
+и заново пересобрать ядро
+
+	make -j 5
+
+В результате будет получен файл vmlinux
+
