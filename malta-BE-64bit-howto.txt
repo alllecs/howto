@@ -58,3 +58,7 @@ CONFIG_32BIT=y                        |  # CONFIG_32BIT is not set
 7. Запускаем сборку образа ядра
 
 	make
+
+8. Пример запуска под qemu:
+
+qemu-system-mips64 -M malta -cpu MIPS64R2-generic -m 2048 -kernel linux_4.6_Malta_64BE/vmlinux -append "console=ttyS0 root=/dev/sda mem=256M@0 mem=1783M@0x90000000" -serial stdio -net user -net nic -nographic -monitor none -hda jessiebig8.img
