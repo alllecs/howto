@@ -30,6 +30,27 @@
 	$ echo "CONFIG_FHANDLE=y" >> arch/mips/configs/malta-big64_defconfig
 	$ echo "CONFIG_CGROUPS=y" >> arch/mips/configs/malta-big64_defconfig
 
+Заменить:
+
+# CONFIG_ARCH_DMA_ADDR_T_64BIT is not |  CONFIG_ARCH_DMA_ADDR_T_64BIT=y
+# CONFIG_MIPS_HUGE_TLB_SUPPORT is not |  CONFIG_SYS_SUPPORTS_HUGETLBFS=y
+CONFIG_CPU_MIPS32_R2=y                |  # CONFIG_CPU_MIPS32_R2 is not set
+# CONFIG_CPU_MIPS64_R2 is not set     |  CONFIG_CPU_MIPS64_R2=y     
+CONFIG_CPU_MIPS32=y                   |  CONFIG_CPU_MIPS64=y    
+
+
+CONFIG_32BIT=y                        |  # CONFIG_32BIT is not set 
+--------------------------------------|  CONFIG_64BIT=y              
+# CONFIG_PHYS_ADDR_T_64BIT is not set |  CONFIG_PHYS_ADDR_T_64BIT=y 
+# CONFIG_HAVE_64BIT_ALIGNED_ACCESS is |  CONFIG_HAVE_64BIT_ALIGNED_ACCESS=y
+--------------------------------------|  CONFIG_MIPS32_O32=y 
+
+
+
+
+	Необходимо включить поддержку 32 бит
+
+
 6. Выбираем конфигурационный файла ядра:
 
 	make malta-big64_defconfig
