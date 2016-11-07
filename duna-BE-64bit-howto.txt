@@ -1,0 +1,23 @@
+		Сборка ядра Linux для Duna Big Endian 64 bit
+	Alexander Smirnov <alllecs@cs.niisi.ras.ru>
+
+1. Получаем исходные тексты ядра с https://duna.niisi.ru/:
+
+	git clone git-duna:linux/linux.git -b dev
+
+2. Переходим в каталог linux:
+
+	cd linux
+
+3. Назначаем архитектуру и кросс-компилятор системе сборки ядра:
+
+        export ARCH=mips
+        export CROSS_COMPILE=/opt/mips-2015.11/bin/mips-linux-gnu-
+
+4. Выбираем конфигурационный файла ядра:
+
+	make srisa_vm8_defconfig
+ 
+5. Запускаем сборку образа ядра
+
+	make

@@ -1,0 +1,4 @@
+./mips64-softmmu/qemu-system-mips64 -machine duna -m 256M -bios ../../Downloads/fw.k64rio.bin -nographic -ramfile name=vmlinuz,addr=0x2000 -ramfile name=rootfs.cpio.gz,addr=0x04000000 -ramfile name=rd.psl,addr=0x1000 -net nic,model=sysbus-vg15 -net tap,script=qemu-ifup,downscript=qemu-ifdown
+
+
+./mips64-softmmu/qemu-system-mips64 -machine duna -m 256M -bios [fw.k64rio.bin](/uploads/000038ed9e3ee4a9ee59f795703a8086/fw.k64rio.bin) -nographic -ramfile name=[vmlinuz](/uploads/dae43c5dce8b370a77622ab3aff0b9a2/vmlinuz),addr=0x2000 -ramfile name=rootfs.cpio.gz,addr=0x04000000 -ramfile name=rd.psl,addr=0x1000 -net nic,model=sysbus-vg15 -net tap,script=qemu-ifup,downscript=qemu-ifdown

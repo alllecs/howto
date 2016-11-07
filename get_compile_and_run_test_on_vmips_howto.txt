@@ -1,0 +1,40 @@
+1.Получение vmips
+git clone git-duna:rndfax/vmips64.git
+
+2. Переход в папку
+cd vmips64/
+
+3. Переход на ветку piton.master
+git checkout piton.master
+
+4. Сборка vmips
+./cmake.sh
+
+5. Переход в папку с тестом
+cd ..
+mkdir vmips_wait
+cd vmips_wait/
+
+6. Создание файла с тестом
+vim wait.s
+
+7. Получение бинаря из исходника
+/opt/mips-2015.11/bin/mips-linux-gnu-gcc -c wait.s
+/opt/mips-2015.11/bin/mips-linux-gnu-objcopy -j .text -O binary wait.o rom.bin
+
+8. Запуск на vmips
+./run_on_vmips_this_test.sh
+
+9. GIT:
+git commit -s .
+git show
+git push origin HEAD:alecs.fix_wait_message
+
+10.
+Чтение из памяти PMON:
+PMON> m -w 0xbb000380
+
+11. Получение бинаря вторым способом
+#/opt/mips-2015.11/bin/mips-linux-gnu-as -wait.s
+#/opt/mips-2015.11/bin/mips-linux-gnu-objdump -d a.out //disassemb
+#/opt/mips-2015.11/bin/mips-linux-gnu-objcopy -O binary a.out rom.bin

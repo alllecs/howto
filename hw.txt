@@ -1,0 +1,4 @@
+ifconfig eth0 hw ether 00:18:f3:a2:54:d0
+ifdown eth0
+ifup eth0
+

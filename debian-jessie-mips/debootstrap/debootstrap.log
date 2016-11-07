@@ -1,0 +1,6 @@
+gpgv: Signature made Sat Apr  2 12:56:05 2016 MSK using RSA key ID 46925553
+gpgv: Good signature from "Debian Archive Automatic Signing Key (7.0/wheezy) <ftpmaster@debian.org>"
+gpgv: Signature made Sat Apr  2 12:56:05 2016 MSK using RSA key ID 2B90D010
+gpgv: Good signature from "Debian Archive Automatic Signing Key (8/jessie) <ftpmaster@debian.org>"
+gpgv: Signature made Sat Apr  2 13:02:07 2016 MSK using RSA key ID 518E17E1
+gpgv: Good signature from "Jessie Stable Release Key <debian-release@lists.debian.org>"

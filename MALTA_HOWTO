@@ -1,0 +1,18 @@
+http://lists.infradead.org/pipermail/barebox/2015-February/022408.html
+
+make qemu-malta_defconfig
+
+make -j 5
+
+
+YAMON can be used to load barebox from tftp-server:
+
+YAMON> setenv ipaddr 10.223.0.177
+YAMON> setenv subnetmask 255.255.255.0
+YAMON> ping 10.223.0.1
+64 bytes ICMP-ECHO-REPLY user data received from 10.223.0.1
+YAMON> fread tftp://10.223.0.1/alecs/zbarebox.bin 0xa0100000
+YAMON> go 0xa0100000
+
+setenv ipaddr 10.223.0.177; setenv subnetmask 255.255.255.0
+fread tftp://10.223.0.1/alecs/zbarebox.bin 0xa0100000; go 0xa0100000

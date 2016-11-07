@@ -1,0 +1,3 @@
+Копирование диска на удаленную машину в архив:
+
+dd if=/dev/sda conv=sync,noerror bs=64K | gzip -c | ssh 194 "dd of=sda.img.gz bs=64k"

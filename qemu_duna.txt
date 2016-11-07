@@ -1,0 +1,5 @@
+Инструкция по сборке qemu duna
+
+1. git clone git-duna:qemu/qemu.git
+2. git checkout exmortis.duna-2.5.0
+3. ./configure.duna && make

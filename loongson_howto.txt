@@ -1,0 +1,19 @@
+Процессор Loongson CHN FJ 147
+CPU GODSON1 @ 249.99 MHz / Bus @ 166.66 MHz
+K9F1G08U0C 128M x 8 Bit NAND Flash Memory
+
+linux mips 32bit
+
+#Для настройки сети
+ifconfig eth0 10.223.0.187
+
+#Для загрузки файлов:
+mount -o nolock 10.223.0.1:/tftpboot/alecs/rootfs /mnt
+
+#Для работы bash:
+chroot /mnt /bin/bash
+
+#Для запуска сборки
+Сборка: /home/scimark2_files# make
+или
+сборка: make CC="gcc -O3 -march=7k"
