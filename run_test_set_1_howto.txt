@@ -1,0 +1,24 @@
+Инструкция по получению проекта и запуску базы тестов test_set_1
+
+Загрузка
+        svn export http://svn.cs.niisi.ras.ru/svn/projects/zubkovsky/SoC.v5.0/
+
+Сборка
+        ~/SoC.v5.0/prj$ ./scripts/ncv.sh -c -b -soc
+
+Запуск (для 1 теста на SOC)
+        Получить ram.bin rom.bin ram_table.ini
+        ./scripts/ncv.sh -R
+
+Сравненине
+        compare.pl
+
+Для базы тестов
+	testlistrun.sh
+
+Для базы тестов на vmips64
+	testlistrun.sh -V
+
+Для запуска упавших тестов
+	testlistrun.sh -b
+

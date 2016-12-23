@@ -1,0 +1,88 @@
+Руководство по настройке безпарольного доступа на ЭВМ по ssh.
+
+Содержание
+
+1. Настройка доступа с помощью копирования .ssh/id_rsa.pub в .ssh/authorized_keys
+2. Изменение в файле /etc/ssh/sshd_config для доступа к root по ssh
+3. Пример .ssh/config
+
+1. Настройка доступа с помощью копирования .ssh/id_rsa.pub
+
+Установить ssh
+	apt-get install ssh
+
+Установить ssh клиент
+	pt-get install openssh-client
+
+Создать папку и настроить права
+	kdir ~/.ssh
+	hmod 700 ~/.ssh
+	d ~/.ssh
+
+Сгенерировать ключ
+	sh-keygen -t rsa -C "A comment... usually an email is enough here..."
+
+Скопировать ключ
+	cp -p id_rsa.pub remoteuser@remotehost:
+
+Добавить ключ
+	ssh remoteuser@remotehost
+	mkdir ~/.ssh
+	chmod 700 ~/.ssh
+	cat id_rsa.pub >> ~/.ssh/authorized_keys
+	chmod 600 ~/.ssh/authorized_keys
+	mv id_rsa.pub ~/.ssh
+	logout
+
+или выполнить
+	ssh-copy-id remoteuser@remotehost
+
+Добавить ключ root/.ssh/authorized_keys
+	sudo cat id_rsa.pub >> /root/.ssh/authorized_keys
+или скопировать
+	sudo cp /home/remoteuser/.ssh/authorized_keys /root/.ssh/authorized_keys
+
+
+2. Изменение в файле /etc/ssh/sshd_config
+
+Перейти к sshd_config
+	cd /etc/ssh
+	cp sshd_config sshd_config.orig
+	nano sshd_config
+
+Изменить:
+
+	PermitRootLogin		yes
+	PasswordAuthentication	yes
+	UsePAM			yes
+
+на
+
+	PermitRootLogin		no
+	PasswordAuthentication	no
+	UsePAM			no
+
+/etc/init.d/ssh restart
+
+
+
+3. Пример .ssh/config
+
+Host niisi-git
+  HostName t182.niisi.ras.ru 
+  Port 2022
+  User git
+  IdentityFile ~/.ssh/t182_gitolite
+
+Host t182
+	hostname t182.niisi.ras.ru
+	port 2022
+
+Host berta
+  HostName 192.168.52.32
+
+
+Host rpi
+  ProxyCommand ssh -q berta nc -q0 10.223.0.110 22 
+  User root
+

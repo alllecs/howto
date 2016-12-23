@@ -1,3 +1,8 @@
+# Инструкция по получению и сборке vmips.
+# А также по сборке и запуске тестов на vmips
+#
+
+
 1.Получение vmips
 git clone git-duna:rndfax/vmips64.git
 

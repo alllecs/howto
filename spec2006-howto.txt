@@ -1,0 +1,22 @@
+Сборка и запуск Spec2006
+
+tar jxf
+
+cd Spec2006
+
+. ./shrc
+
+bin/relocate
+
+зачистка: 
+find . -name "exe" | xargs rm -rf; find . -name "build" | xargs rm -rf; rm result/*
+
+сборка:
+runspec --config=x86-linux-gcc.cfg --action=build --tune=base -I all;
+peak:
+runspec --config=x86-linux-gcc.cfg --action=build --tune=base -I all; runspec --config=x86-linux-gcc.cfg --action=build --tune=peak -I all;
+
+запуск:
+runspec --noreportable --iteration=1 --size=test --tune=base --config=x86-linux-gcc.cfg -I all
+peak:
+runspec --noreportable --iteration=1 --size=ref --tune=base --config=x86-linux-gcc.cfg -I all; runspec --noreportable --iteration=1 --size=ref --tune=peak --config=x86-linux-gcc.cfg -I all

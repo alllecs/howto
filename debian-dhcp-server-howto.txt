@@ -48,3 +48,14 @@ subnet 10.223.254.0 netmask 255.255.255.0
 
 Если все сделано, как указано выше, то вы не увидите ошибки
 и dhcp-сервер будет успешно присваивать ip устройствам.
+
+
+
+NFS!!! server
+
+sudo apt-get install nfs-kernel-server nfs-common
+
+sudo nano /etc/exports:
+	/tftpboot       *(rw,insecure,sync,nohide,no_subtree_check)
+
+sudo /etc/init.d/nfs-kernel-server restart
